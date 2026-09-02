@@ -18,8 +18,9 @@ var (
 
 // NormalizeLookupID performs convenient user-input normalization.
 // For example:
-//   "ac-6", "AC_6", "Ac-6" -> "AC-6"
-//   "ac-6.2", "ac-6(2)", "AC-6(2)" -> "AC-6(2)"
+//
+//	"ac-6", "AC_6", "Ac-6" -> "AC-6"
+//	"ac-6.2", "ac-6(2)", "AC-6(2)" -> "AC-6(2)"
 func NormalizeLookupID(id string) string {
 	clean := strings.TrimSpace(id)
 	if clean == "" {

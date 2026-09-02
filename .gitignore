@@ -2,8 +2,10 @@
 data/catalog.json
 
 # Built binaries
-controlatlas
-controlatlas.exe
+/normarum
+/normarum.exe
+/controlatlas
+/controlatlas.exe
 *.exe
 
 # Test artifacts

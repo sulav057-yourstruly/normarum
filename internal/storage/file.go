@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"controlatlas/internal/control"
 	"encoding/json"
 	"fmt"
+	"normarum/internal/control"
 	"os"
 	"path/filepath"
 )

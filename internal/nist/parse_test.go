@@ -1,7 +1,7 @@
 package nist_test
 
 import (
-	"controlatlas/internal/nist"
+	"normarum/internal/nist"
 	"os"
 	"strings"
 	"testing"

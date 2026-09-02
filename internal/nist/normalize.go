@@ -1,9 +1,9 @@
 package nist
 
 import (
-	"controlatlas/internal/control"
 	"errors"
 	"fmt"
+	"normarum/internal/control"
 	"regexp"
 	"strings"
 	"time"
@@ -18,8 +18,10 @@ var (
 
 // normalizeSourceControlID strictly converts authoritative OSCAL IDs into canonical form.
 // Example:
-//   "ac-6"   -> ("AC-6", nil)
-//   "ac-6.2" -> ("AC-6(2)", nil)
+//
+//	"ac-6"   -> ("AC-6", nil)
+//	"ac-6.2" -> ("AC-6(2)", nil)
+//
 // Malformed or unexpected forms (e.g. "ac-06", "ac6.2", "AC_06") return an error.
 func normalizeSourceControlID(id string) (string, error) {
 	clean := strings.TrimSpace(id)

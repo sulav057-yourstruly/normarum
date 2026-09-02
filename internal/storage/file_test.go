@@ -1,8 +1,8 @@
 package storage_test
 
 import (
-	"controlatlas/internal/control"
-	"controlatlas/internal/storage"
+	"normarum/internal/control"
+	"normarum/internal/storage"
 	"os"
 	"path/filepath"
 	"testing"

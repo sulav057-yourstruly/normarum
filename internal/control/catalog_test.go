@@ -1,7 +1,7 @@
 package control_test
 
 import (
-	"controlatlas/internal/control"
+	"normarum/internal/control"
 	"testing"
 	"time"
 )
@@ -162,9 +162,9 @@ func TestCatalogGet(t *testing.T) {
 	cat := validCatalog()
 
 	tests := []struct {
-		query    string
-		wantID   string
-		wantOK   bool
+		query  string
+		wantID string
+		wantOK bool
 	}{
 		{"AC-6", "AC-6", true},
 		{"ac-6", "AC-6", true},
