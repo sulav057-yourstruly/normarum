@@ -1,0 +1,10 @@
+# Generated local catalog
+data/catalog.json
+
+# Built binaries
+controlatlas
+controlatlas.exe
+*.exe
+
+# Test artifacts
+*.test
