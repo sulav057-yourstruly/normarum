@@ -1,25 +1,25 @@
-package nist_test
+package nist80053_test
 
 import (
-	"normarum/internal/control"
-	"normarum/internal/nist"
+	"normarum/internal/core"
+	"normarum/internal/frameworks/nist80053"
 	"os"
 	"testing"
 )
 
 func TestNormalize_ValidFixture(t *testing.T) {
-	f, err := os.Open("../../testdata/nist-small.json")
+	f, err := os.Open("../../../testdata/nist-small.json")
 	if err != nil {
 		t.Fatalf("failed to open test fixture: %v", err)
 	}
 	defer f.Close()
 
-	doc, err := nist.Parse(f)
+	doc, err := nist80053.Parse(f)
 	if err != nil {
 		t.Fatalf("Parse failed: %v", err)
 	}
 
-	cat, err := nist.Normalize(doc)
+	cat, err := nist80053.Normalize(doc)
 	if err != nil {
 		t.Fatalf("Normalize failed: %v", err)
 	}
@@ -49,17 +49,17 @@ func TestNormalize_ValidFixture(t *testing.T) {
 	}
 
 	ac6, ok := cat.Get("AC-6")
-	if !ok || ac6.Title != "Least Privilege" || ac6.Kind != control.KindControl || ac6.Status != control.StatusActive {
+	if !ok || ac6.Title != "Least Privilege" || ac6.Kind != core.KindControl || ac6.Status != core.StatusActive {
 		t.Fatalf("AC-6 mismatch: %+v", ac6)
 	}
 
 	ac6_2, ok := cat.Get("AC-6(2)")
-	if !ok || ac6_2.ParentID != "AC-6" || ac6_2.Kind != control.KindEnhancement || ac6_2.Status != control.StatusActive {
+	if !ok || ac6_2.ParentID != "AC-6" || ac6_2.Kind != core.KindEnhancement || ac6_2.Status != core.StatusActive {
 		t.Fatalf("AC-6(2) mismatch: %+v", ac6_2)
 	}
 
 	ac7, ok := cat.Get("AC-7")
-	if !ok || ac7.Title != "Unsuccessful Logon Attempts" || ac7.Kind != control.KindControl || ac7.Status != control.StatusActive {
+	if !ok || ac7.Title != "Unsuccessful Logon Attempts" || ac7.Kind != core.KindControl || ac7.Status != core.StatusActive {
 		t.Fatalf("AC-7 mismatch: %+v", ac7)
 	}
 
@@ -68,8 +68,8 @@ func TestNormalize_ValidFixture(t *testing.T) {
 	if !ok {
 		t.Fatal("AC-13 not found in catalog")
 	}
-	if ac13.Status != control.StatusWithdrawn {
-		t.Errorf("AC-13 Status = %q, want %q", ac13.Status, control.StatusWithdrawn)
+	if ac13.Status != core.StatusWithdrawn {
+		t.Errorf("AC-13 Status = %q, want %q", ac13.Status, core.StatusWithdrawn)
 	}
 	if len(ac13.References) != 2 {
 		t.Fatalf("AC-13 References count = %d, want 2", len(ac13.References))
@@ -86,8 +86,8 @@ func TestNormalize_ValidFixture(t *testing.T) {
 	if !ok {
 		t.Fatal("SC-19 not found in catalog")
 	}
-	if sc19.Status != control.StatusWithdrawn {
-		t.Errorf("SC-19 Status = %q, want %q", sc19.Status, control.StatusWithdrawn)
+	if sc19.Status != core.StatusWithdrawn {
+		t.Errorf("SC-19 Status = %q, want %q", sc19.Status, core.StatusWithdrawn)
 	}
 	if len(sc19.References) != 0 {
 		t.Errorf("SC-19 expected 0 references, got %d", len(sc19.References))
@@ -97,79 +97,79 @@ func TestNormalize_ValidFixture(t *testing.T) {
 func TestNormalize_StatusAndReferences(t *testing.T) {
 	tests := []struct {
 		name       string
-		props      []nist.Property
-		links      []nist.Link
-		wantStatus control.Status
-		wantRefs   []control.Reference
+		props      []nist80053.Property
+		links      []nist80053.Link
+		wantStatus core.Status
+		wantRefs   []core.Reference
 		wantErr    bool
 	}{
 		{
 			name:       "absent status defaults to active",
 			props:      nil,
-			wantStatus: control.StatusActive,
+			wantStatus: core.StatusActive,
 		},
 		{
 			name: "explicit withdrawn status",
-			props: []nist.Property{
+			props: []nist80053.Property{
 				{Name: "status", Value: "withdrawn"},
 			},
-			wantStatus: control.StatusWithdrawn,
+			wantStatus: core.StatusWithdrawn,
 		},
 		{
 			name: "unknown explicit status returns error",
-			props: []nist.Property{
+			props: []nist80053.Property{
 				{Name: "status", Value: "retired"},
 			},
 			wantErr: true,
 		},
 		{
 			name: "incorporated-into and moved-to links",
-			props: []nist.Property{
+			props: []nist80053.Property{
 				{Name: "status", Value: "withdrawn"},
 			},
-			links: []nist.Link{
+			links: []nist80053.Link{
 				{Rel: "incorporated-into", Href: "#ac-2"},
 				{Rel: "moved-to", Href: "#sc-7"},
 				{Rel: "related", Href: "#ia-1"}, // Should be ignored
 			},
-			wantStatus: control.StatusWithdrawn,
-			wantRefs: []control.Reference{
+			wantStatus: core.StatusWithdrawn,
+			wantRefs: []core.Reference{
 				{ID: "AC-2", Relation: "incorporated-into"},
 				{ID: "SC-7", Relation: "moved-to"},
 			},
 		},
 		{
 			name: "statement-level reference resolves to parent control",
-			props: []nist.Property{
+			props: []nist80053.Property{
 				{Name: "status", Value: "withdrawn"},
 			},
-			links: []nist.Link{
+			links: []nist80053.Link{
 				{Rel: "incorporated-into", Href: "#ac-2_smt.k"},
 			},
-			wantStatus: control.StatusWithdrawn,
-			wantRefs: []control.Reference{
+			wantStatus: core.StatusWithdrawn,
+			wantRefs: []core.Reference{
 				{ID: "AC-2", Relation: "incorporated-into"},
 			},
 		},
 		{
 			name: "family group reference accepted for target",
-			props: []nist.Property{
+			props: []nist80053.Property{
 				{Name: "status", Value: "withdrawn"},
 			},
-			links: []nist.Link{
+			links: []nist80053.Link{
 				{Rel: "incorporated-into", Href: "#sr"},
 			},
-			wantStatus: control.StatusWithdrawn,
-			wantRefs: []control.Reference{
+			wantStatus: core.StatusWithdrawn,
+			wantRefs: []core.Reference{
 				{ID: "SR", Relation: "incorporated-into"},
 			},
 		},
 		{
 			name: "malformed href missing hash",
-			props: []nist.Property{
+			props: []nist80053.Property{
 				{Name: "status", Value: "withdrawn"},
 			},
-			links: []nist.Link{
+			links: []nist80053.Link{
 				{Rel: "incorporated-into", Href: "ac-2"},
 			},
 			wantErr: true,
@@ -178,13 +178,13 @@ func TestNormalize_StatusAndReferences(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			doc := nist.Document{
-				Catalog: nist.Catalog{
-					Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev. 5 Test", Version: "5.2.0"},
-					Groups: []nist.Group{
+			doc := nist80053.Document{
+				Catalog: nist80053.Catalog{
+					Metadata: nist80053.Metadata{Title: "NIST SP 800-53 Rev. 5 Test", Version: "5.2.0"},
+					Groups: []nist80053.Group{
 						{
 							Title: "Test Family",
-							Controls: []nist.Control{
+							Controls: []nist80053.Control{
 								{
 									ID:    "ac-1",
 									Title: "Test Control",
@@ -197,7 +197,7 @@ func TestNormalize_StatusAndReferences(t *testing.T) {
 				},
 			}
 
-			cat, err := nist.Normalize(doc)
+			cat, err := nist80053.Normalize(doc)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("expected error, got success: %+v", cat)
@@ -246,13 +246,13 @@ func TestNormalize_SourceControlID(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		doc := nist.Document{
-			Catalog: nist.Catalog{
-				Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
-				Groups: []nist.Group{
+		doc := nist80053.Document{
+			Catalog: nist80053.Catalog{
+				Metadata: nist80053.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
+				Groups: []nist80053.Group{
 					{
 						Title: "Access Control",
-						Controls: []nist.Control{
+						Controls: []nist80053.Control{
 							{ID: tt.input, Title: "Test Control"},
 						},
 					},
@@ -260,7 +260,7 @@ func TestNormalize_SourceControlID(t *testing.T) {
 			},
 		}
 
-		cat, err := nist.Normalize(doc)
+		cat, err := nist80053.Normalize(doc)
 		if tt.wantErr {
 			if err == nil {
 				t.Errorf("Normalize(%q) expected error, got success with ID %q", tt.input, cat.Controls[0].ID)
@@ -322,20 +322,20 @@ func TestNormalize_DocumentIdentity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			doc := nist.Document{
-				Catalog: nist.Catalog{
-					Metadata: nist.Metadata{Title: tt.title, Version: tt.version},
-					Groups: []nist.Group{
+			doc := nist80053.Document{
+				Catalog: nist80053.Catalog{
+					Metadata: nist80053.Metadata{Title: tt.title, Version: tt.version},
+					Groups: []nist80053.Group{
 						{
 							Title: "Access Control",
-							Controls: []nist.Control{
+							Controls: []nist80053.Control{
 								{ID: "ac-1", Title: "Policy"},
 							},
 						},
 					},
 				},
 			}
-			_, err := nist.Normalize(doc)
+			_, err := nist80053.Normalize(doc)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Normalize() error = %v, wantErr = %v", err, tt.wantErr)
 			}
@@ -344,12 +344,12 @@ func TestNormalize_DocumentIdentity(t *testing.T) {
 }
 
 func TestNormalize_EmptyRelease(t *testing.T) {
-	doc := nist.Document{
-		Catalog: nist.Catalog{
-			Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "   "},
+	doc := nist80053.Document{
+		Catalog: nist80053.Catalog{
+			Metadata: nist80053.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "   "},
 		},
 	}
-	_, err := nist.Normalize(doc)
+	_, err := nist80053.Normalize(doc)
 	if err == nil {
 		t.Fatal("expected error for empty metadata version, got nil")
 	}
@@ -357,61 +357,61 @@ func TestNormalize_EmptyRelease(t *testing.T) {
 
 func TestNormalize_EmptyGroupsOrControls(t *testing.T) {
 	// Document with empty groups: []
-	docEmptyGroups := nist.Document{
-		Catalog: nist.Catalog{
-			Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
-			Groups:   []nist.Group{},
+	docEmptyGroups := nist80053.Document{
+		Catalog: nist80053.Catalog{
+			Metadata: nist80053.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
+			Groups:   []nist80053.Group{},
 		},
 	}
-	if _, err := nist.Normalize(docEmptyGroups); err == nil {
+	if _, err := nist80053.Normalize(docEmptyGroups); err == nil {
 		t.Fatal("expected error for empty groups, got nil")
 	}
 
 	// Document with group but empty controls: []
-	docEmptyControls := nist.Document{
-		Catalog: nist.Catalog{
-			Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
-			Groups: []nist.Group{
-				{Title: "Access Control", Controls: []nist.Control{}},
+	docEmptyControls := nist80053.Document{
+		Catalog: nist80053.Catalog{
+			Metadata: nist80053.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
+			Groups: []nist80053.Group{
+				{Title: "Access Control", Controls: []nist80053.Control{}},
 			},
 		},
 	}
-	if _, err := nist.Normalize(docEmptyControls); err == nil {
+	if _, err := nist80053.Normalize(docEmptyControls); err == nil {
 		t.Fatal("expected error for empty controls, got nil")
 	}
 }
 
 func TestNormalize_ExactTitlePreservationAndEmptyTitleRejection(t *testing.T) {
 	// 1. Whitespace-only title in base control should be rejected
-	emptyTitleDoc := nist.Document{
-		Catalog: nist.Catalog{
-			Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
-			Groups: []nist.Group{
+	emptyTitleDoc := nist80053.Document{
+		Catalog: nist80053.Catalog{
+			Metadata: nist80053.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
+			Groups: []nist80053.Group{
 				{
 					Title: "Access Control",
-					Controls: []nist.Control{
+					Controls: []nist80053.Control{
 						{ID: "ac-1", Title: "   "},
 					},
 				},
 			},
 		},
 	}
-	if _, err := nist.Normalize(emptyTitleDoc); err == nil {
+	if _, err := nist80053.Normalize(emptyTitleDoc); err == nil {
 		t.Fatal("expected error for whitespace-only control title, got nil")
 	}
 
 	// 2. Whitespace-only title in enhancement should be rejected
-	emptyEnhTitleDoc := nist.Document{
-		Catalog: nist.Catalog{
-			Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
-			Groups: []nist.Group{
+	emptyEnhTitleDoc := nist80053.Document{
+		Catalog: nist80053.Catalog{
+			Metadata: nist80053.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
+			Groups: []nist80053.Group{
 				{
 					Title: "Access Control",
-					Controls: []nist.Control{
+					Controls: []nist80053.Control{
 						{
 							ID:    "ac-1",
 							Title: "Policy",
-							Controls: []nist.Control{
+							Controls: []nist80053.Control{
 								{ID: "ac-1.1", Title: "   "},
 							},
 						},
@@ -420,22 +420,22 @@ func TestNormalize_ExactTitlePreservationAndEmptyTitleRejection(t *testing.T) {
 			},
 		},
 	}
-	if _, err := nist.Normalize(emptyEnhTitleDoc); err == nil {
+	if _, err := nist80053.Normalize(emptyEnhTitleDoc); err == nil {
 		t.Fatal("expected error for whitespace-only enhancement title, got nil")
 	}
 
 	// 3. Exact official title with legitimate trailing space (like SA-4(7)) must be preserved verbatim
-	exactTitleDoc := nist.Document{
-		Catalog: nist.Catalog{
-			Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
-			Groups: []nist.Group{
+	exactTitleDoc := nist80053.Document{
+		Catalog: nist80053.Catalog{
+			Metadata: nist80053.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
+			Groups: []nist80053.Group{
 				{
 					Title: "System and Services Acquisition",
-					Controls: []nist.Control{
+					Controls: []nist80053.Control{
 						{
 							ID:    "sa-4",
 							Title: "Acquisition Process",
-							Controls: []nist.Control{
+							Controls: []nist80053.Control{
 								{ID: "sa-4.7", Title: "NIAP-approved Protection Profiles "},
 							},
 						},
@@ -444,7 +444,7 @@ func TestNormalize_ExactTitlePreservationAndEmptyTitleRejection(t *testing.T) {
 			},
 		},
 	}
-	cat, err := nist.Normalize(exactTitleDoc)
+	cat, err := nist80053.Normalize(exactTitleDoc)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

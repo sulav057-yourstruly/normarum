@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"normarum/internal/control"
+	"normarum/internal/core"
 	"normarum/internal/storage"
 	"os"
 	"path/filepath"
@@ -111,8 +111,8 @@ func createTestEnvironment(t *testing.T) (rawPath, catPath string) {
 	sum := sha256.Sum256([]byte(smallTestOSCAL))
 	rawHash := hex.EncodeToString(sum[:])
 
-	cat := control.Catalog{
-		Source: control.Source{
+	cat := core.Catalog{
+		Source: core.Source{
 			Authority:    "NIST",
 			Standard:     "SP 800-53",
 			Revision:     "5",
@@ -121,29 +121,29 @@ func createTestEnvironment(t *testing.T) (rawPath, catPath string) {
 			SHA256:       rawHash,
 			ImportedAt:   time.Now().UTC(),
 		},
-		Controls: []control.Control{
+		Controls: []core.Control{
 			{
 				ID:     "AC-6",
 				Title:  "Least Privilege",
 				Family: "Access Control",
-				Kind:   control.KindControl,
-				Status: control.StatusActive,
+				Kind:   core.KindControl,
+				Status: core.StatusActive,
 			},
 			{
 				ID:       "AC-6(2)",
 				Title:    "Non-privileged Access for Nonsecurity Functions",
 				Family:   "Access Control",
 				ParentID: "AC-6",
-				Kind:     control.KindEnhancement,
-				Status:   control.StatusActive,
+				Kind:     core.KindEnhancement,
+				Status:   core.StatusActive,
 			},
 			{
 				ID:     "AC-13",
 				Title:  "Supervision and Review — Access Control",
 				Family: "Access Control",
-				Kind:   control.KindControl,
-				Status: control.StatusWithdrawn,
-				References: []control.Reference{
+				Kind:   core.KindControl,
+				Status: core.StatusWithdrawn,
+				References: []core.Reference{
 					{ID: "AC-6", Relation: "incorporated-into"},
 				},
 			},
@@ -151,8 +151,8 @@ func createTestEnvironment(t *testing.T) (rawPath, catPath string) {
 				ID:     "SC-19",
 				Title:  "Voice Over Internet Protocol",
 				Family: "System and Communications Protection",
-				Kind:   control.KindControl,
-				Status: control.StatusWithdrawn,
+				Kind:   core.KindControl,
+				Status: core.StatusWithdrawn,
 			},
 		},
 	}

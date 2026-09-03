@@ -7,8 +7,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"normarum/internal/control"
-	"normarum/internal/nist"
+	"normarum/internal/core"
+	"normarum/internal/frameworks/nist80053"
 	"normarum/internal/storage"
 	"os"
 	"path/filepath"
@@ -68,30 +68,30 @@ Commands:
 // loadSource reads, hashes, parses, normalizes, attaches provenance, and validates
 // an authoritative OSCAL source file in a single-read flow.
 // Both 'normarum import' and 'normarum get --source' enforce this trust boundary.
-func loadSource(path string) (control.Catalog, error) {
+func loadSource(path string) (core.Catalog, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return control.Catalog{}, fmt.Errorf("read source file %q: %w", path, err)
+		return core.Catalog{}, fmt.Errorf("read source file %q: %w", path, err)
 	}
 
 	sum := sha256.Sum256(data)
 	hash := hex.EncodeToString(sum[:])
 
-	doc, err := nist.Parse(bytes.NewReader(data))
+	doc, err := nist80053.Parse(bytes.NewReader(data))
 	if err != nil {
-		return control.Catalog{}, fmt.Errorf("parse source %q: %w", path, err)
+		return core.Catalog{}, fmt.Errorf("parse source %q: %w", path, err)
 	}
 
-	cat, err := nist.Normalize(doc)
+	cat, err := nist80053.Normalize(doc)
 	if err != nil {
-		return control.Catalog{}, fmt.Errorf("normalize source %q: %w", path, err)
+		return core.Catalog{}, fmt.Errorf("normalize source %q: %w", path, err)
 	}
 
 	cat.Source.ImportedFrom = filepath.ToSlash(path)
 	cat.Source.SHA256 = hash
 
 	if err := cat.Validate(); err != nil {
-		return control.Catalog{}, fmt.Errorf("validate source %q: %w", path, err)
+		return core.Catalog{}, fmt.Errorf("validate source %q: %w", path, err)
 	}
 
 	return cat, nil
@@ -102,43 +102,43 @@ func loadSource(path string) (control.Catalog, error) {
 // For verification, it loads cached provenance metadata, reads the raw source at ImportedFrom,
 // verifies that SHA-256 matches the stored fingerprint, and constructs a fresh catalog
 // from the raw bytes. If the raw source is missing or modified, it halts with an integrity error.
-func loadSourceBackedCatalog(catalogPath string) (control.Catalog, error) {
+func loadSourceBackedCatalog(catalogPath string) (core.Catalog, error) {
 	cached, err := storage.Load(catalogPath)
 	if err != nil {
-		return control.Catalog{}, fmt.Errorf("load cached catalog from %q: %w\n(Run 'normarum import <file>' first)", catalogPath, err)
+		return core.Catalog{}, fmt.Errorf("load cached catalog from %q: %w\n(Run 'normarum import <file>' first)", catalogPath, err)
 	}
 
 	if cached.Source.ImportedFrom == "" || cached.Source.SHA256 == "" {
-		return control.Catalog{}, fmt.Errorf("cached catalog %q lacks source provenance metadata\n(Re-run 'normarum import <file>')", catalogPath)
+		return core.Catalog{}, fmt.Errorf("cached catalog %q lacks source provenance metadata\n(Re-run 'normarum import <file>')", catalogPath)
 	}
 
 	rawBytes, err := os.ReadFile(cached.Source.ImportedFrom)
 	if err != nil {
-		return control.Catalog{}, fmt.Errorf("authoritative source file %q unavailable for verification: %w", cached.Source.ImportedFrom, err)
+		return core.Catalog{}, fmt.Errorf("authoritative source file %q unavailable for verification: %w", cached.Source.ImportedFrom, err)
 	}
 
 	sum := sha256.Sum256(rawBytes)
 	rawHash := hex.EncodeToString(sum[:])
 	if rawHash != cached.Source.SHA256 {
-		return control.Catalog{}, fmt.Errorf("authoritative source %q integrity verification failed:\n  expected SHA-256: %s\n  computed SHA-256: %s\n(Source file was modified after import)",
+		return core.Catalog{}, fmt.Errorf("authoritative source %q integrity verification failed:\n  expected SHA-256: %s\n  computed SHA-256: %s\n(Source file was modified after import)",
 			cached.Source.ImportedFrom, cached.Source.SHA256, rawHash)
 	}
 
-	doc, err := nist.Parse(bytes.NewReader(rawBytes))
+	doc, err := nist80053.Parse(bytes.NewReader(rawBytes))
 	if err != nil {
-		return control.Catalog{}, fmt.Errorf("parse authoritative source %q: %w", cached.Source.ImportedFrom, err)
+		return core.Catalog{}, fmt.Errorf("parse authoritative source %q: %w", cached.Source.ImportedFrom, err)
 	}
 
-	cat, err := nist.Normalize(doc)
+	cat, err := nist80053.Normalize(doc)
 	if err != nil {
-		return control.Catalog{}, fmt.Errorf("normalize authoritative source %q: %w", cached.Source.ImportedFrom, err)
+		return core.Catalog{}, fmt.Errorf("normalize authoritative source %q: %w", cached.Source.ImportedFrom, err)
 	}
 
 	cat.Source.ImportedFrom = cached.Source.ImportedFrom
 	cat.Source.SHA256 = rawHash
 
 	if err := cat.Validate(); err != nil {
-		return control.Catalog{}, fmt.Errorf("validate authoritative source %q: %w", cached.Source.ImportedFrom, err)
+		return core.Catalog{}, fmt.Errorf("validate authoritative source %q: %w", cached.Source.ImportedFrom, err)
 	}
 
 	return cat, nil
@@ -200,7 +200,7 @@ func runGet(args []string) int {
 
 	controlID := fs.Arg(0)
 
-	var cat control.Catalog
+	var cat core.Catalog
 	if *sourceFile != "" {
 		var err error
 		cat, err = loadSource(*sourceFile)
@@ -234,7 +234,7 @@ func runGet(args []string) int {
 		cat.Source.Revision,
 	)
 
-	if ctrl.Kind == control.KindEnhancement {
+	if ctrl.Kind == core.KindEnhancement {
 		parentTitle := "Unknown"
 		if parent, pOK := cat.Get(ctrl.ParentID); pOK {
 			parentTitle = parent.Title
@@ -246,14 +246,14 @@ func runGet(args []string) int {
 			parentTitle,
 		)
 	} else {
-		if ctrl.Status == control.StatusWithdrawn {
+		if ctrl.Status == core.StatusWithdrawn {
 			fmt.Printf("%s\n%s\n", ctrl.ID, ctrl.Title)
 		} else {
 			fmt.Printf("%s — %s\n", ctrl.ID, ctrl.Title)
 		}
 	}
 
-	if ctrl.Status == control.StatusWithdrawn {
+	if ctrl.Status == core.StatusWithdrawn {
 		fmt.Println("\nStatus: WITHDRAWN")
 		if len(ctrl.References) > 0 {
 			printReferences(ctrl.References)
@@ -264,9 +264,9 @@ func runGet(args []string) int {
 	return ExitSuccess
 }
 
-func formatKind(k control.Kind) string {
+func formatKind(k core.Kind) string {
 	switch k {
-	case control.KindEnhancement:
+	case core.KindEnhancement:
 		return "Enhancement"
 	default:
 		return "Control"
@@ -316,7 +316,7 @@ func runSearch(args []string) int {
 		if i > 0 {
 			fmt.Println()
 		}
-		if m.Status == control.StatusWithdrawn {
+		if m.Status == core.StatusWithdrawn {
 			fmt.Printf("%s\n%s [WITHDRAWN]\n", m.ID, m.Title)
 		} else {
 			fmt.Printf("%s\n%s\n", m.ID, m.Title)
@@ -372,7 +372,7 @@ func runVerify(args []string) int {
 	}
 
 	// Decision 3: Withdrawn control
-	if res.Status == control.StatusWithdrawn {
+	if res.Status == core.StatusWithdrawn {
 		fmt.Printf("FAIL\n\n%s — %s\n\nStatus: WITHDRAWN\n", res.ID, res.OfficialTitle)
 		if len(res.References) > 0 {
 			printReferences(res.References)
@@ -407,7 +407,7 @@ func runVerify(args []string) int {
 	return ExitSuccess
 }
 
-func printReferences(refs []control.Reference) {
+func printReferences(refs []core.Reference) {
 	grouped := make(map[string][]string)
 	var order []string
 	for _, r := range refs {

@@ -1,20 +1,20 @@
-package nist_test
+package nist80053_test
 
 import (
-	"normarum/internal/nist"
+	"normarum/internal/frameworks/nist80053"
 	"os"
 	"strings"
 	"testing"
 )
 
 func TestParse_ValidFixture(t *testing.T) {
-	f, err := os.Open("../../testdata/nist-small.json")
+	f, err := os.Open("../../../testdata/nist-small.json")
 	if err != nil {
 		t.Fatalf("failed to open test fixture: %v", err)
 	}
 	defer f.Close()
 
-	doc, err := nist.Parse(f)
+	doc, err := nist80053.Parse(f)
 	if err != nil {
 		t.Fatalf("Parse failed: %v", err)
 	}
@@ -38,14 +38,14 @@ func TestParse_ValidFixture(t *testing.T) {
 }
 
 func TestParse_InvalidJSON(t *testing.T) {
-	_, err := nist.Parse(strings.NewReader("{not-valid-json"))
+	_, err := nist80053.Parse(strings.NewReader("{not-valid-json"))
 	if err == nil {
 		t.Fatal("expected error on invalid JSON, got nil")
 	}
 }
 
 func TestParse_NilReader(t *testing.T) {
-	_, err := nist.Parse(nil)
+	_, err := nist80053.Parse(nil)
 	if err == nil {
 		t.Fatal("expected error on nil reader, got nil")
 	}
@@ -53,7 +53,7 @@ func TestParse_NilReader(t *testing.T) {
 
 func TestParse_TrailingData(t *testing.T) {
 	validWithTrailing := `{"catalog":{"metadata":{"version":"5.2.0"}}} {"unexpected": "trailing"}`
-	_, err := nist.Parse(strings.NewReader(validWithTrailing))
+	_, err := nist80053.Parse(strings.NewReader(validWithTrailing))
 	if err == nil {
 		t.Fatal("expected error on trailing data after document, got nil")
 	}

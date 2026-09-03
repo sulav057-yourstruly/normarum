@@ -1,7 +1,7 @@
 package storage_test
 
 import (
-	"normarum/internal/control"
+	"normarum/internal/core"
 	"normarum/internal/storage"
 	"os"
 	"path/filepath"
@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-func sampleCatalog() control.Catalog {
-	return control.Catalog{
-		Source: control.Source{
+func sampleCatalog() core.Catalog {
+	return core.Catalog{
+		Source: core.Source{
 			Authority:    "NIST",
 			Standard:     "SP 800-53",
 			Revision:     "5",
@@ -21,21 +21,21 @@ func sampleCatalog() control.Catalog {
 			SHA256:       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 			ImportedAt:   time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC),
 		},
-		Controls: []control.Control{
+		Controls: []core.Control{
 			{
 				ID:     "AC-6",
 				Title:  "Least Privilege",
 				Family: "Access Control",
-				Kind:   control.KindControl,
-				Status: control.StatusActive,
+				Kind:   core.KindControl,
+				Status: core.StatusActive,
 			},
 			{
 				ID:       "AC-6(1)",
 				Title:    "Authorize Access to Security Functions",
 				Family:   "Access Control",
 				ParentID: "AC-6",
-				Kind:     control.KindEnhancement,
-				Status:   control.StatusActive,
+				Kind:     core.KindEnhancement,
+				Status:   core.StatusActive,
 			},
 		},
 	}

@@ -1,4 +1,4 @@
-package nist
+package nist80053
 
 import (
 	"encoding/json"

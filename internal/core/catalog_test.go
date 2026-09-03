@@ -1,7 +1,7 @@
-package control_test
+package core_test
 
 import (
-	"normarum/internal/control"
+	"normarum/internal/core"
 	"testing"
 	"time"
 )
@@ -10,8 +10,8 @@ func strPtr(s string) *string {
 	return &s
 }
 
-func validSource() control.Source {
-	return control.Source{
+func validSource() core.Source {
+	return core.Source{
 		Authority:    "NIST",
 		Standard:     "SP 800-53",
 		Revision:     "5",
@@ -22,54 +22,54 @@ func validSource() control.Source {
 	}
 }
 
-func validCatalog() control.Catalog {
-	return control.Catalog{
+func validCatalog() core.Catalog {
+	return core.Catalog{
 		Source: validSource(),
-		Controls: []control.Control{
+		Controls: []core.Control{
 			{
 				ID:     "AC-2",
 				Title:  "Account Management",
 				Family: "Access Control",
-				Kind:   control.KindControl,
-				Status: control.StatusActive,
+				Kind:   core.KindControl,
+				Status: core.StatusActive,
 			},
 			{
 				ID:     "AC-6",
 				Title:  "Least Privilege",
 				Family: "Access Control",
-				Kind:   control.KindControl,
-				Status: control.StatusActive,
+				Kind:   core.KindControl,
+				Status: core.StatusActive,
 			},
 			{
 				ID:       "AC-6(1)",
 				Title:    "Authorize Access to Security Functions",
 				Family:   "Access Control",
 				ParentID: "AC-6",
-				Kind:     control.KindEnhancement,
-				Status:   control.StatusActive,
+				Kind:     core.KindEnhancement,
+				Status:   core.StatusActive,
 			},
 			{
 				ID:       "AC-6(2)",
 				Title:    "Non-Privileged Access for Nonsecurity Functions",
 				Family:   "Access Control",
 				ParentID: "AC-6",
-				Kind:     control.KindEnhancement,
-				Status:   control.StatusActive,
+				Kind:     core.KindEnhancement,
+				Status:   core.StatusActive,
 			},
 			{
 				ID:     "AC-7",
 				Title:  "Unsuccessful Logon Attempts",
 				Family: "Access Control",
-				Kind:   control.KindControl,
-				Status: control.StatusActive,
+				Kind:   core.KindControl,
+				Status: core.StatusActive,
 			},
 			{
 				ID:     "AC-13",
 				Title:  "Supervision and Review — Access Control",
 				Family: "Access Control",
-				Kind:   control.KindControl,
-				Status: control.StatusWithdrawn,
-				References: []control.Reference{
+				Kind:   core.KindControl,
+				Status: core.StatusWithdrawn,
+				References: []core.Reference{
 					{ID: "AC-2", Relation: "incorporated-into"},
 					{ID: "AU-6", Relation: "incorporated-into"},
 				},
@@ -78,8 +78,8 @@ func validCatalog() control.Catalog {
 				ID:     "AU-6",
 				Title:  "Audit Record Review, Analysis, and Reporting",
 				Family: "Audit and Accountability",
-				Kind:   control.KindControl,
-				Status: control.StatusActive,
+				Kind:   core.KindControl,
+				Status: core.StatusActive,
 			},
 		},
 	}
@@ -97,15 +97,15 @@ func TestCatalogValidate_MissingSource(t *testing.T) {
 
 	tests := []struct {
 		name string
-		src  control.Source
+		src  core.Source
 	}{
-		{"empty authority", control.Source{Standard: "SP 800-53", Revision: "5", Release: "5.2.0", SHA256: validSHA}},
-		{"empty standard", control.Source{Authority: "NIST", Revision: "5", Release: "5.2.0", SHA256: validSHA}},
-		{"empty revision", control.Source{Authority: "NIST", Standard: "SP 800-53", Release: "5.2.0", SHA256: validSHA}},
-		{"empty release", control.Source{Authority: "NIST", Standard: "SP 800-53", Revision: "5", SHA256: validSHA}},
-		{"empty sha256", control.Source{Authority: "NIST", Standard: "SP 800-53", Revision: "5", Release: "5.2.0"}},
-		{"invalid hex sha256", control.Source{Authority: "NIST", Standard: "SP 800-53", Revision: "5", Release: "5.2.0", SHA256: "not-a-hex-hash"}},
-		{"short sha256", control.Source{Authority: "NIST", Standard: "SP 800-53", Revision: "5", Release: "5.2.0", SHA256: "abcd"}},
+		{"empty authority", core.Source{Standard: "SP 800-53", Revision: "5", Release: "5.2.0", SHA256: validSHA}},
+		{"empty standard", core.Source{Authority: "NIST", Revision: "5", Release: "5.2.0", SHA256: validSHA}},
+		{"empty revision", core.Source{Authority: "NIST", Standard: "SP 800-53", Release: "5.2.0", SHA256: validSHA}},
+		{"empty release", core.Source{Authority: "NIST", Standard: "SP 800-53", Revision: "5", SHA256: validSHA}},
+		{"empty sha256", core.Source{Authority: "NIST", Standard: "SP 800-53", Revision: "5", Release: "5.2.0"}},
+		{"invalid hex sha256", core.Source{Authority: "NIST", Standard: "SP 800-53", Revision: "5", Release: "5.2.0", SHA256: "not-a-hex-hash"}},
+		{"short sha256", core.Source{Authority: "NIST", Standard: "SP 800-53", Revision: "5", Release: "5.2.0", SHA256: "abcd"}},
 	}
 
 	for _, tt := range tests {
@@ -122,118 +122,118 @@ func TestCatalogValidate_MissingSource(t *testing.T) {
 func TestCatalogValidate_InvalidControlFields(t *testing.T) {
 	tests := []struct {
 		name    string
-		mutate  func(*control.Catalog)
+		mutate  func(*core.Catalog)
 		wantErr string
 	}{
 		{
 			name: "empty ID",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[0].ID = ""
 			},
 			wantErr: "control ID cannot be empty",
 		},
 		{
 			name: "empty title",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[0].Title = "   "
 			},
 			wantErr: "empty title",
 		},
 		{
 			name: "invalid kind",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[0].Kind = "subcontrol"
 			},
 			wantErr: "invalid kind",
 		},
 		{
 			name: "invalid status",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[0].Status = "deprecated"
 			},
 			wantErr: "invalid status",
 		},
 		{
 			name: "empty status",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[0].Status = ""
 			},
 			wantErr: "invalid status",
 		},
 		{
 			name: "duplicate ID",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[1].ID = c.Controls[0].ID
 			},
 			wantErr: "duplicate control ID",
 		},
 		{
 			name: "invalid canonical control ID shape",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[0].ID = "ac-2"
 			},
 			wantErr: "invalid canonical identifier shape",
 		},
 		{
 			name: "padded canonical control ID",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[0].ID = "AC-02"
 			},
 			wantErr: "invalid canonical identifier shape",
 		},
 		{
 			name: "invalid canonical enhancement ID shape",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[2].ID = "AC-6.1"
 			},
 			wantErr: "invalid canonical identifier shape",
 		},
 		{
 			name: "padded canonical enhancement ID",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[2].ID = "AC-6(01)"
 			},
 			wantErr: "invalid canonical identifier shape",
 		},
 		{
 			name: "missing parent ID",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[2].ParentID = ""
 			},
 			wantErr: "missing parent ID",
 		},
 		{
 			name: "self-referencing parent",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[2].ParentID = c.Controls[2].ID
 			},
 			wantErr: "cannot be its own parent",
 		},
 		{
 			name: "enhancement parent mismatch",
-			mutate: func(c *control.Catalog) {
+			mutate: func(c *core.Catalog) {
 				c.Controls[3].ParentID = "AC-2" // AC-6(2) pointing to AC-2
 			},
 			wantErr: "expected \"AC-6\" based on canonical identifier",
 		},
 		{
 			name: "non-existent parent",
-			mutate: func(c *control.Catalog) {
-				c.Controls = append(c.Controls, control.Control{
+			mutate: func(c *core.Catalog) {
+				c.Controls = append(c.Controls, core.Control{
 					ID:       "IA-99(1)",
 					Title:    "Custom Enhancement",
 					Family:   "Identification and Authentication",
 					ParentID: "IA-99",
-					Kind:     control.KindEnhancement,
-					Status:   control.StatusActive,
+					Kind:     core.KindEnhancement,
+					Status:   core.StatusActive,
 				})
 			},
 			wantErr: "references non-existent parent",
 		},
 		{
 			name: "reference with empty target ID",
-			mutate: func(c *control.Catalog) {
-				c.Controls[5].References = []control.Reference{
+			mutate: func(c *core.Catalog) {
+				c.Controls[5].References = []core.Reference{
 					{ID: "", Relation: "incorporated-into"},
 				}
 			},
@@ -241,8 +241,8 @@ func TestCatalogValidate_InvalidControlFields(t *testing.T) {
 		},
 		{
 			name: "reference with empty relation",
-			mutate: func(c *control.Catalog) {
-				c.Controls[5].References = []control.Reference{
+			mutate: func(c *core.Catalog) {
+				c.Controls[5].References = []core.Reference{
 					{ID: "AC-2", Relation: "   "},
 				}
 			},
@@ -250,8 +250,8 @@ func TestCatalogValidate_InvalidControlFields(t *testing.T) {
 		},
 		{
 			name: "self-referencing reference",
-			mutate: func(c *control.Catalog) {
-				c.Controls[5].References = []control.Reference{
+			mutate: func(c *core.Catalog) {
+				c.Controls[5].References = []core.Reference{
 					{ID: c.Controls[5].ID, Relation: "incorporated-into"},
 				}
 			},
@@ -259,8 +259,8 @@ func TestCatalogValidate_InvalidControlFields(t *testing.T) {
 		},
 		{
 			name: "reference to non-existent target",
-			mutate: func(c *control.Catalog) {
-				c.Controls[5].References = []control.Reference{
+			mutate: func(c *core.Catalog) {
+				c.Controls[5].References = []core.Reference{
 					{ID: "ZZ-99", Relation: "incorporated-into"},
 				}
 			},
@@ -268,8 +268,8 @@ func TestCatalogValidate_InvalidControlFields(t *testing.T) {
 		},
 		{
 			name: "duplicate reference within control",
-			mutate: func(c *control.Catalog) {
-				c.Controls[5].References = []control.Reference{
+			mutate: func(c *core.Catalog) {
+				c.Controls[5].References = []core.Reference{
 					{ID: "AC-2", Relation: "incorporated-into"},
 					{ID: "AC-2", Relation: "incorporated-into"},
 				}
@@ -340,7 +340,7 @@ func TestCatalogSearch(t *testing.T) {
 
 	// Match withdrawn controls
 	res = cat.Search("Supervision")
-	if len(res) != 1 || res[0].ID != "AC-13" || res[0].Status != control.StatusWithdrawn {
+	if len(res) != 1 || res[0].ID != "AC-13" || res[0].Status != core.StatusWithdrawn {
 		t.Fatalf("expected 1 withdrawn match for 'Supervision', got %v", res)
 	}
 
@@ -356,7 +356,7 @@ func TestCatalogVerify(t *testing.T) {
 
 	// Mode 1: Active control existence only with title omitted (PASS)
 	v1 := cat.Verify("AC-6", nil)
-	if !v1.Exists || v1.NonCanonical || v1.TitleChecked || v1.Status != control.StatusActive || v1.OfficialTitle != "Least Privilege" {
+	if !v1.Exists || v1.NonCanonical || v1.TitleChecked || v1.Status != core.StatusActive || v1.OfficialTitle != "Least Privilege" {
 		t.Fatalf("unexpected verification for active existence only: %+v", v1)
 	}
 
@@ -394,19 +394,19 @@ func TestCatalogVerify(t *testing.T) {
 
 	// Canonical Withdrawn control: reaches withdrawn branch
 	vWithdrawn1 := cat.Verify("AC-13", nil)
-	if !vWithdrawn1.Exists || vWithdrawn1.NonCanonical || vWithdrawn1.Status != control.StatusWithdrawn || len(vWithdrawn1.References) != 2 {
+	if !vWithdrawn1.Exists || vWithdrawn1.NonCanonical || vWithdrawn1.Status != core.StatusWithdrawn || len(vWithdrawn1.References) != 2 {
 		t.Fatalf("expected withdrawn control verification metadata: %+v", vWithdrawn1)
 	}
 
 	// Canonical Withdrawn control with title: halts before title evaluation
 	vWithdrawnWithTitle := cat.Verify("AC-13", strPtr("Supervision and Review — Access Control"))
-	if !vWithdrawnWithTitle.Exists || vWithdrawnWithTitle.Status != control.StatusWithdrawn || vWithdrawnWithTitle.TitleChecked {
+	if !vWithdrawnWithTitle.Exists || vWithdrawnWithTitle.Status != core.StatusWithdrawn || vWithdrawnWithTitle.TitleChecked {
 		t.Fatalf("expected withdrawn control to halt before title evaluation: %+v", vWithdrawnWithTitle)
 	}
 
 	// Mode 2: Exact title match (PASS)
 	vExact := cat.Verify("AC-6", strPtr("Least Privilege"))
-	if !vExact.Exists || vExact.NonCanonical || !vExact.TitleChecked || !vExact.TitleMatches || vExact.Status != control.StatusActive {
+	if !vExact.Exists || vExact.NonCanonical || !vExact.TitleChecked || !vExact.TitleMatches || vExact.Status != core.StatusActive {
 		t.Fatalf("expected exact title match: %+v", vExact)
 	}
 
@@ -430,15 +430,15 @@ func TestCatalogVerify(t *testing.T) {
 }
 
 func TestCatalogSort(t *testing.T) {
-	cat := control.Catalog{
+	cat := core.Catalog{
 		Source: validSource(),
-		Controls: []control.Control{
-			{ID: "IA-2", Title: "Identification and Authentication", Kind: control.KindControl, Status: control.StatusActive},
-			{ID: "AC-10", Title: "Concurrent Session Control", Kind: control.KindControl, Status: control.StatusActive},
-			{ID: "AC-6(2)", Title: "Non-Privileged Access", ParentID: "AC-6", Kind: control.KindEnhancement, Status: control.StatusActive},
-			{ID: "AC-6", Title: "Least Privilege", Kind: control.KindControl, Status: control.StatusActive},
-			{ID: "AC-6(1)", Title: "Authorize Access", ParentID: "AC-6", Kind: control.KindEnhancement, Status: control.StatusActive},
-			{ID: "AC-1", Title: "Policy and Procedures", Kind: control.KindControl, Status: control.StatusActive},
+		Controls: []core.Control{
+			{ID: "IA-2", Title: "Identification and Authentication", Kind: core.KindControl, Status: core.StatusActive},
+			{ID: "AC-10", Title: "Concurrent Session Control", Kind: core.KindControl, Status: core.StatusActive},
+			{ID: "AC-6(2)", Title: "Non-Privileged Access", ParentID: "AC-6", Kind: core.KindEnhancement, Status: core.StatusActive},
+			{ID: "AC-6", Title: "Least Privilege", Kind: core.KindControl, Status: core.StatusActive},
+			{ID: "AC-6(1)", Title: "Authorize Access", ParentID: "AC-6", Kind: core.KindEnhancement, Status: core.StatusActive},
+			{ID: "AC-1", Title: "Policy and Procedures", Kind: core.KindControl, Status: core.StatusActive},
 		},
 	}
 
@@ -459,7 +459,7 @@ func TestCatalogValidate_EmptyControls(t *testing.T) {
 		t.Fatal("expected error for empty controls, got nil")
 	}
 
-	cat.Controls = []control.Control{}
+	cat.Controls = []core.Control{}
 	if err := cat.Validate(); err == nil {
 		t.Fatal("expected error for empty controls slice, got nil")
 	}

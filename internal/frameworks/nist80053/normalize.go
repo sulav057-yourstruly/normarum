@@ -1,9 +1,9 @@
-package nist
+package nist80053
 
 import (
 	"errors"
 	"fmt"
-	"normarum/internal/control"
+	"normarum/internal/core"
 	"regexp"
 	"strings"
 	"time"
@@ -80,26 +80,26 @@ func normalizeSourceReferenceTarget(target string) (string, error) {
 	return "", fmt.Errorf("malformed or unsupported reference target format: %q", target)
 }
 
-// controlStatus maps OSCAL properties to a canonical control.Status.
-// If the status property is absent, it defaults to control.StatusActive.
-// If status == "withdrawn", it returns control.StatusWithdrawn.
+// controlStatus maps OSCAL properties to a canonical core.Status.
+// If the status property is absent, it defaults to core.StatusActive.
+// If status == "withdrawn", it returns core.StatusWithdrawn.
 // Any other explicit status value returns an error.
-func controlStatus(props []Property) (control.Status, error) {
+func controlStatus(props []Property) (core.Status, error) {
 	for _, p := range props {
 		if strings.TrimSpace(p.Name) == "status" {
 			val := strings.TrimSpace(p.Value)
 			if val == "withdrawn" {
-				return control.StatusWithdrawn, nil
+				return core.StatusWithdrawn, nil
 			}
 			return "", fmt.Errorf("unknown explicit control status: %q", val)
 		}
 	}
-	return control.StatusActive, nil
+	return core.StatusActive, nil
 }
 
 // controlReferences extracts supported authoritative NIST relationships ("incorporated-into", "moved-to").
-func controlReferences(links []Link) ([]control.Reference, error) {
-	var refs []control.Reference
+func controlReferences(links []Link) ([]core.Reference, error) {
+	var refs []core.Reference
 	for _, link := range links {
 		rel := strings.TrimSpace(link.Rel)
 		switch rel {
@@ -119,7 +119,7 @@ func controlReferences(links []Link) ([]control.Reference, error) {
 			return nil, fmt.Errorf("normalize reference target %q: %w", rawTarget, err)
 		}
 
-		refs = append(refs, control.Reference{
+		refs = append(refs, core.Reference{
 			ID:       targetID,
 			Relation: rel,
 		})
@@ -150,17 +150,17 @@ func validateDocumentIdentity(meta Metadata) error {
 // Normalize constructs canonical standard data from a parsed NIST OSCAL document.
 // Artifact provenance (SHA-256 fingerprint and source path) is attached by the
 // source-loading boundary before the catalog becomes trusted through Validate().
-func Normalize(doc Document) (control.Catalog, error) {
+func Normalize(doc Document) (core.Catalog, error) {
 	if err := validateDocumentIdentity(doc.Catalog.Metadata); err != nil {
-		return control.Catalog{}, err
+		return core.Catalog{}, err
 	}
 
 	if len(doc.Catalog.Groups) == 0 {
-		return control.Catalog{}, errors.New("NIST OSCAL document contains no control groups")
+		return core.Catalog{}, errors.New("NIST OSCAL document contains no control groups")
 	}
 
 	release := strings.TrimSpace(doc.Catalog.Metadata.Version)
-	source := control.Source{
+	source := core.Source{
 		Authority:  "NIST",
 		Standard:   "SP 800-53",
 		Revision:   "5",
@@ -168,7 +168,7 @@ func Normalize(doc Document) (control.Catalog, error) {
 		ImportedAt: time.Now().UTC(),
 	}
 
-	var controls []control.Control
+	var controls []core.Control
 
 	for _, group := range doc.Catalog.Groups {
 		family := strings.TrimSpace(group.Title)
@@ -179,28 +179,28 @@ func Normalize(doc Document) (control.Catalog, error) {
 		for _, oscalCtrl := range group.Controls {
 			canonID, err := normalizeSourceControlID(oscalCtrl.ID)
 			if err != nil {
-				return control.Catalog{}, fmt.Errorf("normalize control %q: %w", oscalCtrl.ID, err)
+				return core.Catalog{}, fmt.Errorf("normalize control %q: %w", oscalCtrl.ID, err)
 			}
 
 			status, err := controlStatus(oscalCtrl.Props)
 			if err != nil {
-				return control.Catalog{}, fmt.Errorf("control %q status: %w", oscalCtrl.ID, err)
+				return core.Catalog{}, fmt.Errorf("control %q status: %w", oscalCtrl.ID, err)
 			}
 
 			refs, err := controlReferences(oscalCtrl.Links)
 			if err != nil {
-				return control.Catalog{}, fmt.Errorf("control %q references: %w", oscalCtrl.ID, err)
+				return core.Catalog{}, fmt.Errorf("control %q references: %w", oscalCtrl.ID, err)
 			}
 
 			title := oscalCtrl.Title
 			if strings.TrimSpace(title) == "" {
-				return control.Catalog{}, fmt.Errorf("control %q has empty title", oscalCtrl.ID)
+				return core.Catalog{}, fmt.Errorf("control %q has empty title", oscalCtrl.ID)
 			}
-			controls = append(controls, control.Control{
+			controls = append(controls, core.Control{
 				ID:         canonID,
 				Title:      title,
 				Family:     family,
-				Kind:       control.KindControl,
+				Kind:       core.KindControl,
 				Status:     status,
 				References: refs,
 			})
@@ -208,29 +208,29 @@ func Normalize(doc Document) (control.Catalog, error) {
 			for _, oscalEnh := range oscalCtrl.Controls {
 				enhCanonID, err := normalizeSourceControlID(oscalEnh.ID)
 				if err != nil {
-					return control.Catalog{}, fmt.Errorf("normalize enhancement %q: %w", oscalEnh.ID, err)
+					return core.Catalog{}, fmt.Errorf("normalize enhancement %q: %w", oscalEnh.ID, err)
 				}
 
 				enhStatus, err := controlStatus(oscalEnh.Props)
 				if err != nil {
-					return control.Catalog{}, fmt.Errorf("enhancement %q status: %w", oscalEnh.ID, err)
+					return core.Catalog{}, fmt.Errorf("enhancement %q status: %w", oscalEnh.ID, err)
 				}
 
 				enhRefs, err := controlReferences(oscalEnh.Links)
 				if err != nil {
-					return control.Catalog{}, fmt.Errorf("enhancement %q references: %w", oscalEnh.ID, err)
+					return core.Catalog{}, fmt.Errorf("enhancement %q references: %w", oscalEnh.ID, err)
 				}
 
 				enhTitle := oscalEnh.Title
 				if strings.TrimSpace(enhTitle) == "" {
-					return control.Catalog{}, fmt.Errorf("enhancement %q has empty title", oscalEnh.ID)
+					return core.Catalog{}, fmt.Errorf("enhancement %q has empty title", oscalEnh.ID)
 				}
-				controls = append(controls, control.Control{
+				controls = append(controls, core.Control{
 					ID:         enhCanonID,
 					Title:      enhTitle,
 					Family:     family,
 					ParentID:   canonID,
-					Kind:       control.KindEnhancement,
+					Kind:       core.KindEnhancement,
 					Status:     enhStatus,
 					References: enhRefs,
 				})
@@ -239,10 +239,10 @@ func Normalize(doc Document) (control.Catalog, error) {
 	}
 
 	if len(controls) == 0 {
-		return control.Catalog{}, errors.New("NIST OSCAL document contains no controls")
+		return core.Catalog{}, errors.New("NIST OSCAL document contains no controls")
 	}
 
-	cat := control.Catalog{
+	cat := core.Catalog{
 		Source:   source,
 		Controls: controls,
 	}

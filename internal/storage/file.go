@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"normarum/internal/control"
+	"normarum/internal/core"
 	"os"
 	"path/filepath"
 )
 
-// Save writes a normalized control.Catalog to disk as formatted JSON without mutating the catalog.
-func Save(path string, cat *control.Catalog) error {
+// Save writes a normalized core.Catalog to disk as formatted JSON without mutating the catalog.
+func Save(path string, cat *core.Catalog) error {
 	if cat == nil {
 		return errors.New("cannot save nil catalog")
 	}
@@ -36,17 +36,17 @@ func Save(path string, cat *control.Catalog) error {
 	return nil
 }
 
-// Load reads and unmarshals a normalized control.Catalog from a JSON file.
+// Load reads and unmarshals a normalized core.Catalog from a JSON file.
 // It performs no domain validation; the caller is responsible for validating the loaded catalog.
-func Load(path string) (control.Catalog, error) {
+func Load(path string) (core.Catalog, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return control.Catalog{}, fmt.Errorf("read catalog file %q: %w", path, err)
+		return core.Catalog{}, fmt.Errorf("read catalog file %q: %w", path, err)
 	}
 
-	var cat control.Catalog
+	var cat core.Catalog
 	if err := json.Unmarshal(data, &cat); err != nil {
-		return control.Catalog{}, fmt.Errorf("decode catalog JSON %q: %w", path, err)
+		return core.Catalog{}, fmt.Errorf("decode catalog JSON %q: %w", path, err)
 	}
 
 	return cat, nil

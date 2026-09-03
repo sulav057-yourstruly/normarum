@@ -1,4 +1,4 @@
-package nist
+package nist80053
 
 // Document represents the top-level OSCAL document structure.
 type Document struct {
@@ -43,4 +43,26 @@ type Control struct {
 	Props    []Property `json:"props,omitempty"`
 	Links    []Link     `json:"links,omitempty"`
 	Controls []Control  `json:"controls,omitempty"`
+}
+
+// ProfileDocument represents the top-level OSCAL profile document structure.
+type ProfileDocument struct {
+	Profile Profile `json:"profile"`
+}
+
+// Profile represents the OSCAL profile object.
+type Profile struct {
+	Metadata Metadata        `json:"metadata"`
+	Imports  []ProfileImport `json:"imports"`
+}
+
+// ProfileImport represents an import element in an OSCAL profile.
+type ProfileImport struct {
+	Href            string            `json:"href"`
+	IncludeControls []IncludeControls `json:"include-controls"`
+}
+
+// IncludeControls represents controls selected for inclusion in a profile.
+type IncludeControls struct {
+	WithIDs []string `json:"with-ids"`
 }

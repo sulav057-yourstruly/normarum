@@ -1,0 +1,24 @@
+{
+  "profile": {
+    "uuid": "test-baseline-uuid-1234",
+    "metadata": {
+      "title": "NIST SP 800-53 Rev. 5 Small Test Baseline Profile",
+      "version": "5.2.0"
+    },
+    "imports": [
+      {
+        "href": "#catalog-ref",
+        "include-controls": [
+          {
+            "with-ids": [
+              "ac-1",
+              "ac-2",
+              "ac-6",
+              "ac-6.2"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

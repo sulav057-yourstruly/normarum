@@ -1,4 +1,4 @@
-package control
+package core
 
 // Verify checks whether an exact control reference exists, whether it is active, and optionally verifies if the title matches exactly.
 // If title is nil, title verification is omitted (TitleChecked is false).
