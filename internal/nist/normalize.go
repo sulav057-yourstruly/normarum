@@ -192,7 +192,10 @@ func Normalize(doc Document) (control.Catalog, error) {
 				return control.Catalog{}, fmt.Errorf("control %q references: %w", oscalCtrl.ID, err)
 			}
 
-			title := strings.TrimSpace(oscalCtrl.Title)
+			title := oscalCtrl.Title
+			if strings.TrimSpace(title) == "" {
+				return control.Catalog{}, fmt.Errorf("control %q has empty title", oscalCtrl.ID)
+			}
 			controls = append(controls, control.Control{
 				ID:         canonID,
 				Title:      title,
@@ -218,7 +221,10 @@ func Normalize(doc Document) (control.Catalog, error) {
 					return control.Catalog{}, fmt.Errorf("enhancement %q references: %w", oscalEnh.ID, err)
 				}
 
-				enhTitle := strings.TrimSpace(oscalEnh.Title)
+				enhTitle := oscalEnh.Title
+				if strings.TrimSpace(enhTitle) == "" {
+					return control.Catalog{}, fmt.Errorf("enhancement %q has empty title", oscalEnh.ID)
+				}
 				controls = append(controls, control.Control{
 					ID:         enhCanonID,
 					Title:      enhTitle,

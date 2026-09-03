@@ -171,12 +171,10 @@ func runImport(args []string) int {
 		return ExitProgramError
 	}
 
-	fmt.Printf("Imported %s %s Rev. %s\nRelease: %s\nArtifact SHA-256: %s\n\nControls: %d\nOutput: %s\n",
+	fmt.Printf("Imported %s %s Rev. %s\nControls: %d\nOutput: %s\n",
 		cat.Source.Authority,
 		cat.Source.Standard,
 		cat.Source.Revision,
-		cat.Source.Release,
-		cat.Source.SHA256,
 		len(cat.Controls),
 		defaultCatalogPath,
 	)
@@ -230,11 +228,10 @@ func runGet(args []string) int {
 	}
 
 	// Format output explainably
-	fmt.Printf("%s %s Rev. %s\nRelease: %s\n\n",
+	fmt.Printf("%s %s Rev. %s\n\n",
 		cat.Source.Authority,
 		cat.Source.Standard,
 		cat.Source.Revision,
-		cat.Source.Release,
 	)
 
 	if ctrl.Kind == control.KindEnhancement {

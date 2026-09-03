@@ -380,3 +380,84 @@ func TestNormalize_EmptyGroupsOrControls(t *testing.T) {
 		t.Fatal("expected error for empty controls, got nil")
 	}
 }
+
+func TestNormalize_ExactTitlePreservationAndEmptyTitleRejection(t *testing.T) {
+	// 1. Whitespace-only title in base control should be rejected
+	emptyTitleDoc := nist.Document{
+		Catalog: nist.Catalog{
+			Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
+			Groups: []nist.Group{
+				{
+					Title: "Access Control",
+					Controls: []nist.Control{
+						{ID: "ac-1", Title: "   "},
+					},
+				},
+			},
+		},
+	}
+	if _, err := nist.Normalize(emptyTitleDoc); err == nil {
+		t.Fatal("expected error for whitespace-only control title, got nil")
+	}
+
+	// 2. Whitespace-only title in enhancement should be rejected
+	emptyEnhTitleDoc := nist.Document{
+		Catalog: nist.Catalog{
+			Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
+			Groups: []nist.Group{
+				{
+					Title: "Access Control",
+					Controls: []nist.Control{
+						{
+							ID:    "ac-1",
+							Title: "Policy",
+							Controls: []nist.Control{
+								{ID: "ac-1.1", Title: "   "},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	if _, err := nist.Normalize(emptyEnhTitleDoc); err == nil {
+		t.Fatal("expected error for whitespace-only enhancement title, got nil")
+	}
+
+	// 3. Exact official title with legitimate trailing space (like SA-4(7)) must be preserved verbatim
+	exactTitleDoc := nist.Document{
+		Catalog: nist.Catalog{
+			Metadata: nist.Metadata{Title: "NIST SP 800-53 Rev 5 Test", Version: "5.2.0"},
+			Groups: []nist.Group{
+				{
+					Title: "System and Services Acquisition",
+					Controls: []nist.Control{
+						{
+							ID:    "sa-4",
+							Title: "Acquisition Process",
+							Controls: []nist.Control{
+								{ID: "sa-4.7", Title: "NIAP-approved Protection Profiles "},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	cat, err := nist.Normalize(exactTitleDoc)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	found := false
+	for _, ctrl := range cat.Controls {
+		if ctrl.ID == "SA-4(7)" {
+			found = true
+			if ctrl.Title != "NIAP-approved Protection Profiles " {
+				t.Fatalf("expected title %q to be preserved verbatim, got %q", "NIAP-approved Protection Profiles ", ctrl.Title)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("control SA-4(7) not found in normalized catalog")
+	}
+}
