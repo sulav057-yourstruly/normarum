@@ -1,0 +1,80 @@
+name: CI & Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Verify Formatting
+        run: |
+          diffs=$(gofmt -l cmd/ internal/)
+          if [ -n "$diffs" ]; then
+            echo "Formatting drift detected in:"
+            echo "$diffs"
+            exit 1
+          fi
+
+      - name: Go Vet
+        run: go vet ./...
+
+      - name: Run Unit & Race Tests
+        run: go test -race -count=1 -v ./...
+
+      - name: Test Real Catalog Import & Verify
+        run: |
+          go build -o normarum ./cmd/normarum
+          mkdir -p /tmp/normarum-smoke
+          cd /tmp/normarum-smoke
+          "$GITHUB_WORKSPACE/normarum" import "$GITHUB_WORKSPACE/data/raw/NIST_SP-800-53_rev5_catalog.json"
+          "$GITHUB_WORKSPACE/normarum" verify AC-6 "Least Privilege"
+          "$GITHUB_WORKSPACE/normarum" verify "AC-6(2)" "Non-privileged Access for Nonsecurity Functions"
+          "$GITHUB_WORKSPACE/normarum" get AC-6
+          "$GITHUB_WORKSPACE/normarum" search privilege
+
+  build:
+    name: Build & Package Releases
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Compile Cross-Platform Binaries
+        run: |
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/normarum-linux-amd64 ./cmd/normarum
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/normarum-windows-amd64.exe ./cmd/normarum
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/normarum-darwin-amd64 ./cmd/normarum
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/normarum-darwin-arm64 ./cmd/normarum
+
+      - name: Generate Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

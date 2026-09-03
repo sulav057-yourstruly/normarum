@@ -37,6 +37,29 @@ func captureOutput(fn func()) string {
 	return <-outC
 }
 
+// captureStderr intercepts os.Stderr during the execution of fn and returns the captured output.
+func captureStderr(fn func()) string {
+	r, w, err := os.Pipe()
+	if err != nil {
+		fn()
+		return ""
+	}
+	oldStderr := os.Stderr
+	os.Stderr = w
+
+	outC := make(chan string)
+	go func() {
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		outC <- buf.String()
+	}()
+
+	fn()
+	_ = w.Close()
+	os.Stderr = oldStderr
+	return <-outC
+}
+
 const smallTestOSCAL = `{
 	"catalog": {
 		"metadata": {"title": "NIST SP 800-53 Rev. 5 Small Test Fixture", "version": "5.2.0"},
@@ -47,11 +70,13 @@ const smallTestOSCAL = `{
 				"controls": [
 					{
 						"id": "ac-6",
-						"title": "Least Privilege"
-					},
-					{
-						"id": "ac-6.2",
-						"title": "Non-privileged Access for Nonsecurity Functions"
+						"title": "Least Privilege",
+						"controls": [
+							{
+								"id": "ac-6.2",
+								"title": "Non-privileged Access for Nonsecurity Functions"
+							}
+						]
 					},
 					{
 						"id": "ac-13",
@@ -578,5 +603,58 @@ func TestCLIImport_EmptyGroupsOrControlsRobustness(t *testing.T) {
 	code = runImport([]string{emptyControlsPath})
 	if code != ExitProgramError {
 		t.Fatalf("expected ExitProgramError (2) on importing empty controls, got %d", code)
+	}
+}
+
+func TestCLI_SubcommandHelpAndExtraArgs(t *testing.T) {
+	// 1. Subcommand -h and --help should return ExitSuccess (0)
+	for _, sub := range []string{"import", "get", "search", "verify"} {
+		for _, flag := range []string{"-h", "--help"} {
+			var code int
+			captureOutput(func() {
+				switch sub {
+				case "import":
+					code = runImport([]string{flag})
+				case "get":
+					code = runGet([]string{flag})
+				case "search":
+					code = runSearch([]string{flag})
+				case "verify":
+					code = runVerify([]string{flag})
+				}
+			})
+			if code != ExitSuccess {
+				t.Errorf("subcommand %s %s exited with %d, want %d", sub, flag, code, ExitSuccess)
+			}
+		}
+	}
+
+	// 2. Extra positional arguments should be rejected with ExitProgramError (2)
+	extraTests := []struct {
+		name string
+		run  func() int
+	}{
+		{"import extra args", func() int { return runImport([]string{"a.json", "b.json"}) }},
+		{"get extra args", func() int { return runGet([]string{"AC-6", "AC-7"}) }},
+		{"search extra args", func() int { return runSearch([]string{"query1", "query2"}) }},
+		{"verify extra args (unquoted multi-word title)", func() int { return runVerify([]string{"AC-6", "Least", "Privilege"}) }},
+	}
+
+	for _, tt := range extraTests {
+		var code int
+		captureOutput(func() {
+			code = tt.run()
+		})
+		if code != ExitProgramError {
+			t.Errorf("%s: got exit code %d, want %d", tt.name, code, ExitProgramError)
+		}
+	}
+
+	// 3. Banner check
+	out := captureStderr(func() {
+		printUsage()
+	})
+	if !strings.Contains(out, "normarum v0.1.0") {
+		t.Errorf("expected usage banner to contain 'normarum v0.1.0', got: %s", out)
 	}
 }

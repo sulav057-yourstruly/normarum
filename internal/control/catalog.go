@@ -16,6 +16,9 @@ var (
 	userLookupEnhancementRegex = regexp.MustCompile(`^([a-zA-Z]{2,3})[-_ ]*(\d+)[. (]+(\d+)\)?$`)
 	// userLookupControlRegex matches input forms like "ac-6", "AC_6", "ac 6".
 	userLookupControlRegex = regexp.MustCompile(`^([a-zA-Z]{2,3})[-_ ]*(\d+)$`)
+
+	canonicalControlRegex     = regexp.MustCompile(`^([A-Z]{2,3})-([1-9]\d*)$`)
+	canonicalEnhancementRegex = regexp.MustCompile(`^([A-Z]{2,3})-([1-9]\d*)\(([1-9]\d*)\)$`)
 )
 
 // NormalizeLookupID performs convenient user-input normalization.
@@ -72,7 +75,7 @@ func (c *Catalog) Validate() error {
 	idMap := make(map[string]Control, len(c.Controls))
 	familyMap := make(map[string]struct{})
 
-	// First pass: validate each control's fields and uniqueness
+	// First pass: validate each control's fields, canonical shape, and uniqueness
 	for _, ctrl := range c.Controls {
 		if strings.TrimSpace(ctrl.ID) == "" {
 			return errors.New("control ID cannot be empty")
@@ -82,6 +85,15 @@ func (c *Catalog) Validate() error {
 		}
 		if ctrl.Kind != KindControl && ctrl.Kind != KindEnhancement {
 			return fmt.Errorf("control %q has invalid kind %q", ctrl.ID, ctrl.Kind)
+		}
+		if ctrl.Kind == KindControl {
+			if !canonicalControlRegex.MatchString(ctrl.ID) {
+				return fmt.Errorf("control %q has invalid canonical identifier shape", ctrl.ID)
+			}
+		} else if ctrl.Kind == KindEnhancement {
+			if !canonicalEnhancementRegex.MatchString(ctrl.ID) {
+				return fmt.Errorf("enhancement %q has invalid canonical identifier shape", ctrl.ID)
+			}
 		}
 		if ctrl.Status != StatusActive && ctrl.Status != StatusWithdrawn {
 			return fmt.Errorf("control %q has invalid status %q", ctrl.ID, ctrl.Status)
@@ -105,6 +117,13 @@ func (c *Catalog) Validate() error {
 			}
 			if ctrl.ParentID == ctrl.ID {
 				return fmt.Errorf("enhancement %q cannot be its own parent", ctrl.ID)
+			}
+			m := canonicalEnhancementRegex.FindStringSubmatch(ctrl.ID)
+			if len(m) == 4 {
+				expectedParent := fmt.Sprintf("%s-%s", m[1], m[2])
+				if ctrl.ParentID != expectedParent {
+					return fmt.Errorf("enhancement %q has parent %q, expected %q based on canonical identifier", ctrl.ID, ctrl.ParentID, expectedParent)
+				}
 			}
 			parent, exists := idMap[ctrl.ParentID]
 			if !exists {

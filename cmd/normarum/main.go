@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"flag"
 	"fmt"
 	"normarum/internal/control"
@@ -51,7 +52,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Fprintf(os.Stderr, `normarum V0.1 — Authoritative Security Control Reference Tool
+	fmt.Fprintf(os.Stderr, `normarum v0.1.0 — Authoritative Security Control Reference Tool
 
 Usage:
   normarum <command> [arguments]
@@ -146,11 +147,14 @@ func loadSourceBackedCatalog(catalogPath string) (control.Catalog, error) {
 func runImport(args []string) int {
 	fs := flag.NewFlagSet("import", flag.ContinueOnError)
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return ExitSuccess
+		}
 		return ExitProgramError
 	}
 
-	if fs.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "Error: import requires an OSCAL JSON file path")
+	if fs.NArg() != 1 {
+		fmt.Fprintln(os.Stderr, "Error: import requires exactly one OSCAL JSON file path")
 		fmt.Fprintln(os.Stderr, "Usage: normarum import <file>")
 		return ExitProgramError
 	}
@@ -184,11 +188,14 @@ func runGet(args []string) int {
 	sourceFile := fs.String("source", "", "read directly from OSCAL source file (debug/first-slice convenience)")
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return ExitSuccess
+		}
 		return ExitProgramError
 	}
 
-	if fs.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "Error: get requires a control ID")
+	if fs.NArg() != 1 {
+		fmt.Fprintln(os.Stderr, "Error: get requires exactly one control ID")
 		fmt.Fprintln(os.Stderr, "Usage: normarum get [--source <file>] <control-id>")
 		return ExitProgramError
 	}
@@ -272,11 +279,15 @@ func formatKind(k control.Kind) string {
 func runSearch(args []string) int {
 	fs := flag.NewFlagSet("search", flag.ContinueOnError)
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return ExitSuccess
+		}
 		return ExitProgramError
 	}
 
-	if fs.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "Error: search query must not be empty")
+	if fs.NArg() != 1 {
+		fmt.Fprintln(os.Stderr, "Error: search requires exactly one search query")
+		fmt.Fprintln(os.Stderr, "Usage: normarum search <query>")
 		return ExitProgramError
 	}
 
@@ -321,18 +332,21 @@ func runSearch(args []string) int {
 func runVerify(args []string) int {
 	fs := flag.NewFlagSet("verify", flag.ContinueOnError)
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return ExitSuccess
+		}
 		return ExitProgramError
 	}
 
-	if fs.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "Error: verify requires at least a control ID")
+	if fs.NArg() < 1 || fs.NArg() > 2 {
+		fmt.Fprintln(os.Stderr, "Error: verify requires a control ID and an optional title (multi-word titles must be enclosed in quotes)")
 		fmt.Fprintln(os.Stderr, "Usage: normarum verify <control-id> [title]")
 		return ExitProgramError
 	}
 
 	controlID := fs.Arg(0)
 	var expectedTitle *string
-	if fs.NArg() >= 2 {
+	if fs.NArg() == 2 {
 		t := fs.Arg(1)
 		expectedTitle = &t
 	}

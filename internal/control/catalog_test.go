@@ -168,6 +168,34 @@ func TestCatalogValidate_InvalidControlFields(t *testing.T) {
 			wantErr: "duplicate control ID",
 		},
 		{
+			name: "invalid canonical control ID shape",
+			mutate: func(c *control.Catalog) {
+				c.Controls[0].ID = "ac-2"
+			},
+			wantErr: "invalid canonical identifier shape",
+		},
+		{
+			name: "padded canonical control ID",
+			mutate: func(c *control.Catalog) {
+				c.Controls[0].ID = "AC-02"
+			},
+			wantErr: "invalid canonical identifier shape",
+		},
+		{
+			name: "invalid canonical enhancement ID shape",
+			mutate: func(c *control.Catalog) {
+				c.Controls[2].ID = "AC-6.1"
+			},
+			wantErr: "invalid canonical identifier shape",
+		},
+		{
+			name: "padded canonical enhancement ID",
+			mutate: func(c *control.Catalog) {
+				c.Controls[2].ID = "AC-6(01)"
+			},
+			wantErr: "invalid canonical identifier shape",
+		},
+		{
 			name: "missing parent ID",
 			mutate: func(c *control.Catalog) {
 				c.Controls[2].ParentID = ""
@@ -182,18 +210,25 @@ func TestCatalogValidate_InvalidControlFields(t *testing.T) {
 			wantErr: "cannot be its own parent",
 		},
 		{
-			name: "non-existent parent",
+			name: "enhancement parent mismatch",
 			mutate: func(c *control.Catalog) {
-				c.Controls[2].ParentID = "NON-EXISTENT"
+				c.Controls[3].ParentID = "AC-2" // AC-6(2) pointing to AC-2
 			},
-			wantErr: "non-existent parent",
+			wantErr: "expected \"AC-6\" based on canonical identifier",
 		},
 		{
-			name: "parent is enhancement not control",
+			name: "non-existent parent",
 			mutate: func(c *control.Catalog) {
-				c.Controls[3].ParentID = c.Controls[2].ID // points to AC-6(1)
+				c.Controls = append(c.Controls, control.Control{
+					ID:       "IA-99(1)",
+					Title:    "Custom Enhancement",
+					Family:   "Identification and Authentication",
+					ParentID: "IA-99",
+					Kind:     control.KindEnhancement,
+					Status:   control.StatusActive,
+				})
 			},
-			wantErr: "must be a control",
+			wantErr: "references non-existent parent",
 		},
 		{
 			name: "reference with empty target ID",
