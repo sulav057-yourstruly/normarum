@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"normarum/internal/control"
 	"os"
@@ -9,10 +10,13 @@ import (
 )
 
 // Save writes a normalized control.Catalog to disk as formatted JSON without mutating the catalog.
-func Save(path string, cat control.Catalog) error {
+func Save(path string, cat *control.Catalog) error {
+	if cat == nil {
+		return errors.New("cannot save nil catalog")
+	}
 	dir := filepath.Dir(path)
 	if dir != "." && dir != "" {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("create directory %q: %w", dir, err)
 		}
 	}
@@ -25,7 +29,7 @@ func Save(path string, cat control.Catalog) error {
 	// Add trailing newline for POSIX-friendly file formatting
 	data = append(data, '\n')
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("write catalog file %q: %w", path, err)
 	}
 

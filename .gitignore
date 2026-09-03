@@ -1,11 +1,12 @@
 # Generated local catalog
 data/catalog.json
 
+# Raw upstream reference data
+data/raw/*
+
 # Built binaries
 /normarum
 /normarum.exe
-/controlatlas
-/controlatlas.exe
 *.exe
 
 # Test artifacts

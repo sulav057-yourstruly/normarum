@@ -11,6 +11,10 @@
         "title": "Access Control",
         "controls": [
           {
+            "id": "ac-2",
+            "title": "Account Management"
+          },
+          {
             "id": "ac-6",
             "title": "Least Privilege",
             "controls": [
@@ -27,6 +31,52 @@
           {
             "id": "ac-7",
             "title": "Unsuccessful Logon Attempts"
+          },
+          {
+            "id": "ac-13",
+            "title": "Supervision and Review — Access Control",
+            "props": [
+              {
+                "name": "status",
+                "value": "withdrawn"
+              }
+            ],
+            "links": [
+              {
+                "rel": "incorporated-into",
+                "href": "#ac-2"
+              },
+              {
+                "rel": "incorporated-into",
+                "href": "#au-6"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "au",
+        "title": "Audit and Accountability",
+        "controls": [
+          {
+            "id": "au-6",
+            "title": "Audit Record Review, Analysis, and Reporting"
+          }
+        ]
+      },
+      {
+        "id": "sc",
+        "title": "System and Communications Protection",
+        "controls": [
+          {
+            "id": "sc-19",
+            "title": "Voice Over Internet Protocol",
+            "props": [
+              {
+                "name": "status",
+                "value": "withdrawn"
+              }
+            ]
           }
         ]
       }

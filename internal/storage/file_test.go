@@ -5,6 +5,7 @@ import (
 	"normarum/internal/storage"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -12,10 +13,13 @@ import (
 func sampleCatalog() control.Catalog {
 	return control.Catalog{
 		Source: control.Source{
-			Framework:  "NIST SP 800-53",
-			Revision:   "5",
-			Release:    "5.2.0",
-			ImportedAt: time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC),
+			Authority:    "NIST",
+			Standard:     "SP 800-53",
+			Revision:     "5",
+			Release:      "5.2.0",
+			ImportedFrom: "data/raw/test.json",
+			SHA256:       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			ImportedAt:   time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC),
 		},
 		Controls: []control.Control{
 			{
@@ -23,6 +27,7 @@ func sampleCatalog() control.Catalog {
 				Title:  "Least Privilege",
 				Family: "Access Control",
 				Kind:   control.KindControl,
+				Status: control.StatusActive,
 			},
 			{
 				ID:       "AC-6(1)",
@@ -30,6 +35,7 @@ func sampleCatalog() control.Catalog {
 				Family:   "Access Control",
 				ParentID: "AC-6",
 				Kind:     control.KindEnhancement,
+				Status:   control.StatusActive,
 			},
 		},
 	}
@@ -40,7 +46,7 @@ func TestSaveAndLoad_RoundTrip(t *testing.T) {
 	catPath := filepath.Join(tempDir, "catalog.json")
 
 	original := sampleCatalog()
-	if err := storage.Save(catPath, original); err != nil {
+	if err := storage.Save(catPath, &original); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
 
@@ -54,9 +60,11 @@ func TestSaveAndLoad_RoundTrip(t *testing.T) {
 		t.Fatalf("Loaded catalog validation failed: %v", err)
 	}
 
-	if loaded.Source.Framework != original.Source.Framework ||
+	if loaded.Source.Authority != original.Source.Authority ||
+		loaded.Source.Standard != original.Source.Standard ||
 		loaded.Source.Revision != original.Source.Revision ||
-		loaded.Source.Release != original.Source.Release {
+		loaded.Source.Release != original.Source.Release ||
+		loaded.Source.SHA256 != original.Source.SHA256 {
 		t.Errorf("Source mismatch: got %+v, want %+v", loaded.Source, original.Source)
 	}
 
@@ -65,9 +73,18 @@ func TestSaveAndLoad_RoundTrip(t *testing.T) {
 	}
 
 	for i := range original.Controls {
-		if loaded.Controls[i] != original.Controls[i] {
+		if !reflect.DeepEqual(loaded.Controls[i], original.Controls[i]) {
 			t.Errorf("Control[%d] mismatch: got %+v, want %+v", i, loaded.Controls[i], original.Controls[i])
 		}
+	}
+}
+
+func TestSave_NilCatalog(t *testing.T) {
+	tempDir := t.TempDir()
+	catPath := filepath.Join(tempDir, "catalog.json")
+
+	if err := storage.Save(catPath, nil); err == nil {
+		t.Fatal("expected error saving nil catalog, got nil")
 	}
 }
 
@@ -80,7 +97,7 @@ func TestSave_DoesNotMutateCallerCatalog(t *testing.T) {
 	original.Controls[0], original.Controls[1] = original.Controls[1], original.Controls[0]
 	firstIDBefore := original.Controls[0].ID
 
-	if err := storage.Save(catPath, original); err != nil {
+	if err := storage.Save(catPath, &original); err != nil {
 		t.Fatalf("Save failed: %v", err)
 	}
 
@@ -100,7 +117,7 @@ func TestLoad_InvalidJSON(t *testing.T) {
 	tempDir := t.TempDir()
 	catPath := filepath.Join(tempDir, "corrupted.json")
 
-	if err := os.WriteFile(catPath, []byte("not-valid-json"), 0644); err != nil {
+	if err := os.WriteFile(catPath, []byte("not-valid-json"), 0o644); err != nil {
 		t.Fatalf("failed to write corrupted file: %v", err)
 	}
 
@@ -123,7 +140,7 @@ func TestLoad_CorruptCatalogDomainValidation(t *testing.T) {
 		]
 	}`
 
-	if err := os.WriteFile(catPath, []byte(invalidJSON), 0644); err != nil {
+	if err := os.WriteFile(catPath, []byte(invalidJSON), 0o644); err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
 

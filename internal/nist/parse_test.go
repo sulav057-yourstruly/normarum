@@ -23,8 +23,8 @@ func TestParse_ValidFixture(t *testing.T) {
 		t.Errorf("Metadata.Version = %q, want %q", doc.Catalog.Metadata.Version, "5.2.0")
 	}
 
-	if len(doc.Catalog.Groups) != 1 {
-		t.Fatalf("Groups len = %d, want 1", len(doc.Catalog.Groups))
+	if len(doc.Catalog.Groups) != 3 {
+		t.Fatalf("Groups len = %d, want 3", len(doc.Catalog.Groups))
 	}
 
 	group := doc.Catalog.Groups[0]
@@ -32,8 +32,8 @@ func TestParse_ValidFixture(t *testing.T) {
 		t.Errorf("Group.Title = %q, want 'Access Control'", group.Title)
 	}
 
-	if len(group.Controls) != 2 { // ac-6, ac-7
-		t.Fatalf("Group.Controls len = %d, want 2", len(group.Controls))
+	if len(group.Controls) != 4 { // ac-2, ac-6, ac-7, ac-13
+		t.Fatalf("Group.Controls len = %d, want 4", len(group.Controls))
 	}
 }
 
@@ -48,5 +48,13 @@ func TestParse_NilReader(t *testing.T) {
 	_, err := nist.Parse(nil)
 	if err == nil {
 		t.Fatal("expected error on nil reader, got nil")
+	}
+}
+
+func TestParse_TrailingData(t *testing.T) {
+	validWithTrailing := `{"catalog":{"metadata":{"version":"5.2.0"}}} {"unexpected": "trailing"}`
+	_, err := nist.Parse(strings.NewReader(validWithTrailing))
+	if err == nil {
+		t.Fatal("expected error on trailing data after document, got nil")
 	}
 }
